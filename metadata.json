@@ -1,0 +1,6 @@
+{
+  "name": "VoxLibris - Transcritor de Audiolivros",
+  "description": "Transcritor inteligente e leitor imersivo de audiolivros em MP3 e M4A com antecipação e destaque sincronizado palavra por palavra.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
