@@ -83,45 +83,75 @@ export async function initWhisperPipeline(): Promise<any> {
 }
 
 /**
- * Transcribe an audio slice (Float32Array at 16kHz) strictly using local in-browser Whisper
+ * Transcribe an audio slice: Defaults to Gemini 3.5 Cloud API, with seamless local Whisper WebGPU fallback
  */
 export async function transcribeAudioChunk(
   audioPCM: Float32Array,
+  audioWavBase64: string | null,
   chunkStart: number,
   chunkDuration: number,
-  _ignoredEngine?: any,
+  preferredEngine: TranscriptionEngine = 'gemini-cloud',
   language?: string
 ): Promise<TranscriptionResult> {
-  const hasWebGPU = await checkWebGPUSupport();
-  const engineUsed: TranscriptionEngine = hasWebGPU ? 'whisper-webgpu' : 'whisper-wasm';
-
   // Check if audio has energy (not pure silence)
   let sumSquares = 0;
   for (let i = 0; i < audioPCM.length; i++) {
     sumSquares += audioPCM[i] * audioPCM[i];
   }
   const rms = Math.sqrt(sumSquares / audioPCM.length);
-  if (rms < 0.003) {
+  if (rms < 0.002) {
     // Silence or background pause
     return {
       text: '',
       words: [],
-      engineUsed,
+      engineUsed: preferredEngine,
     };
   }
+
+  // Strategy 1: Default to Gemini API Server Route
+  if (preferredEngine === 'gemini-cloud' && audioWavBase64) {
+    try {
+      const response = await fetch('/api/transcribe-chunk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          audioBase64: audioWavBase64,
+          chunkStart,
+          duration: chunkDuration,
+          mimeType: 'audio/wav',
+          language: language === 'pt' ? 'pt' : language === 'en' ? 'en' : 'auto',
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.words && data.words.length > 0) {
+          return {
+            text: data.text || '',
+            words: data.words,
+            engineUsed: 'gemini-cloud',
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Gemini Cloud API call notice, falling back to local Whisper:', err);
+    }
+  }
+
+  // Strategy 2: Local Whisper WebGPU / WASM
+  const hasWebGPU = await checkWebGPUSupport();
+  const localEngineUsed: TranscriptionEngine = hasWebGPU ? 'whisper-webgpu' : 'whisper-wasm';
 
   try {
     const pipe = await initWhisperPipeline();
     if (!pipe) {
-      console.warn('Whisper pipeline still preparing or not available');
       return {
         text: '',
         words: [],
-        engineUsed,
+        engineUsed: localEngineUsed,
       };
     }
 
-    // Call whisper pipeline with return_timestamps: true
     const pipeOptions: any = {
       return_timestamps: true,
       chunk_length_s: 30,
@@ -166,7 +196,6 @@ export async function transcribeAudioChunk(
         }
       }
     } else if (text) {
-      // Fallback: If chunks was empty but text was recognized
       const tokens = text.split(/\s+/).filter(Boolean);
       const wordDuration = Math.max(0.2, chunkDuration / tokens.length);
       for (let i = 0; i < tokens.length; i++) {
@@ -184,14 +213,14 @@ export async function transcribeAudioChunk(
     return {
       text,
       words,
-      engineUsed,
+      engineUsed: localEngineUsed,
     };
   } catch (err: any) {
-    console.error('Falha na inferência do Whisper local:', err?.message || err);
+    console.error('Local Whisper execution error:', err?.message || err);
     return {
       text: '',
       words: [],
-      engineUsed,
+      engineUsed: localEngineUsed,
     };
   }
 }

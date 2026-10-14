@@ -31,7 +31,7 @@ export interface AudiobookItem {
 
 export type ReaderTheme = 'obsidian' | 'paper' | 'sepia';
 export type FontSize = 'sm' | 'md' | 'lg' | 'xl';
-export type TranscriptionEngine = 'whisper-webgpu' | 'whisper-wasm';
+export type TranscriptionEngine = 'gemini-cloud' | 'whisper-webgpu' | 'whisper-wasm';
 
 export interface LookaheadBufferState {
   isBuffering: boolean;

@@ -1,5 +1,6 @@
 import React from 'react';
-import { BookOpen, Upload, Library, Download, Cpu, Globe } from 'lucide-react';
+import { BookOpen, Upload, Library, Download, Cpu, Globe, Zap } from 'lucide-react';
+import { TranscriptionEngine } from '../types/audiobook';
 
 interface TopNavProps {
   onOpenUpload: () => void;
@@ -9,6 +10,8 @@ interface TopNavProps {
   hasWebGPU?: boolean;
   language?: 'auto' | 'pt' | 'en';
   onLanguageChange?: (lang: 'auto' | 'pt' | 'en') => void;
+  engine?: TranscriptionEngine;
+  onEngineChange?: (engine: TranscriptionEngine) => void;
 }
 
 export const TopNav: React.FC<TopNavProps> = ({
@@ -16,9 +19,10 @@ export const TopNav: React.FC<TopNavProps> = ({
   onOpenLibrary,
   onOpenExport,
   currentBookTitle = 'Dom Casmurro',
-  hasWebGPU = true,
   language = 'auto',
   onLanguageChange,
+  engine = 'gemini-cloud',
+  onEngineChange,
 }) => {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-stone-800 bg-stone-950/90 backdrop-blur-md px-6 py-3.5">
@@ -55,6 +59,36 @@ export const TopNav: React.FC<TopNavProps> = ({
             <span className="text-xs font-semibold text-stone-200 truncate">{currentBookTitle}</span>
           </div>
 
+          {/* Engine Selector (Gemini Cloud Default vs Whisper Local) */}
+          {onEngineChange && (
+            <div className="flex items-center gap-1 p-0.5 rounded bg-stone-900 border border-stone-800 text-xs">
+              <button
+                onClick={() => onEngineChange('gemini-cloud')}
+                className={`px-2 py-1 rounded font-mono text-[11px] flex items-center gap-1.5 transition-all cursor-pointer ${
+                  engine === 'gemini-cloud'
+                    ? 'bg-amber-500/25 text-amber-300 font-bold border border-amber-500/50 shadow-sm shadow-amber-500/10'
+                    : 'text-stone-400 hover:text-stone-200'
+                }`}
+                title="Google Gemini 3.5 Transcribe Cloud API (Motor Padrão Ultrarrápido)"
+              >
+                <Zap className="w-3 h-3 text-amber-400 fill-current" />
+                <span>Gemini API (Padrão)</span>
+              </button>
+              <button
+                onClick={() => onEngineChange('whisper-webgpu')}
+                className={`px-2 py-1 rounded font-mono text-[11px] flex items-center gap-1.5 transition-all cursor-pointer ${
+                  engine !== 'gemini-cloud'
+                    ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40'
+                    : 'text-stone-400 hover:text-stone-200'
+                }`}
+                title="Whisper WebGPU Local no Navegador"
+              >
+                <Cpu className="w-3 h-3 text-emerald-400" />
+                <span>Whisper Local</span>
+              </button>
+            </div>
+          )}
+
           {/* Spoken Language Selector */}
           {onLanguageChange && (
             <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-stone-900 border border-stone-800 text-xs">
@@ -81,11 +115,6 @@ export const TopNav: React.FC<TopNavProps> = ({
               ))}
             </div>
           )}
-
-          <div className="flex items-center gap-1.5 text-xs font-mono text-emerald-400/90 whitespace-nowrap shrink-0">
-            <Cpu className="w-3.5 h-3.5" />
-            <span>{hasWebGPU ? 'Whisper WebGPU Local' : 'Whisper WASM Local'}</span>
-          </div>
 
           <button
             onClick={onOpenExport}

@@ -22,6 +22,7 @@ export default function App() {
   const [waveform, setWaveform] = useState<number[]>([]);
   const [hasWebGPU, setHasWebGPU] = useState(true);
   const [language, setLanguage] = useState<'auto' | 'pt' | 'en'>('auto');
+  const [engine, setEngine] = useState<import('./types/audiobook').TranscriptionEngine>('gemini-cloud');
   const [modelStatus, setModelStatus] = useState<{ isLoading: boolean; progress: number; message: string }>({
     isLoading: false,
     progress: 0,
@@ -40,7 +41,7 @@ export default function App() {
     isBuffering: false,
     transcribedUpTo: 0,
     lookaheadWindow: 12,
-    activeEngine: 'whisper-webgpu',
+    activeEngine: 'gemini-cloud',
     queueStatus: 'idle',
   });
 
@@ -227,6 +228,11 @@ export default function App() {
         hasWebGPU={hasWebGPU}
         language={language}
         onLanguageChange={setLanguage}
+        engine={engine}
+        onEngineChange={(newEngine) => {
+          setEngine(newEngine);
+          lookaheadManager.setEngine(newEngine);
+        }}
       />
 
       {/* Main Interactive Karaoke Reading Area */}

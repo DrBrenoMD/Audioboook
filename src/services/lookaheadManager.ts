@@ -15,11 +15,16 @@ export class LookaheadManager {
   private isProcessingChunk = false;
   private isPreloaded = false;
   private totalDuration = 0;
-  private activeEngine: import('../types/audiobook').TranscriptionEngine = 'whisper-webgpu';
+  private activeEngine: import('../types/audiobook').TranscriptionEngine = 'gemini-cloud';
   private listeners: LookaheadListener[] = [];
 
   constructor(lookaheadWindow = 12) {
     this.lookaheadWindow = lookaheadWindow;
+  }
+
+  public setEngine(engine: import('../types/audiobook').TranscriptionEngine) {
+    this.activeEngine = engine;
+    this.notify();
   }
 
   public subscribe(listener: LookaheadListener) {
@@ -109,15 +114,17 @@ export class LookaheadManager {
     const sliceDuration = Math.max(6, targetEndSec - startSec);
 
     try {
-      // Extract 16kHz PCM audio slice directly via AudioEngine
+      // Extract 16kHz PCM audio slice and WAV base64 via AudioEngine
       const pcmData = audioEngine.extractAudioSlicePCM(startSec, sliceDuration);
+      const wavBase64 = audioEngine.extractAudioSliceWavBase64(startSec, sliceDuration);
 
       if (pcmData && pcmData.length > 0) {
         const result = await transcribeAudioChunk(
           pcmData,
+          wavBase64,
           startSec,
           sliceDuration,
-          undefined,
+          this.activeEngine,
           language
         );
 
