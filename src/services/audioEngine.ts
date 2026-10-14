@@ -211,6 +211,38 @@ class AudioEngine {
   }
 
   /**
+   * Extract audio slice (e.g. 10 to 15 seconds) from decoded buffer directly as 16kHz Float32Array for Whisper
+   */
+  public extractAudioSlicePCM(startSec: number, durationSec: number): Float32Array | null {
+    if (!this.decodedBuffer) return null;
+
+    const sampleRate = this.decodedBuffer.sampleRate;
+    const startSample = Math.floor(startSec * sampleRate);
+    const endSample = Math.min(
+      this.decodedBuffer.length,
+      Math.floor((startSec + durationSec) * sampleRate)
+    );
+
+    if (startSample >= endSample) return null;
+
+    const sliceLength = endSample - startSample;
+    const channelData = this.decodedBuffer.getChannelData(0);
+
+    // Resample to 16000Hz (native Whisper audio format)
+    const targetSampleRate = 16000;
+    const resampleRatio = targetSampleRate / sampleRate;
+    const targetLength = Math.round(sliceLength * resampleRatio);
+    const resampledData = new Float32Array(targetLength);
+
+    for (let i = 0; i < targetLength; i++) {
+      const origIndex = startSample + Math.floor(i / resampleRatio);
+      resampledData[i] = channelData[origIndex] || 0;
+    }
+
+    return resampledData;
+  }
+
+  /**
    * Extract audio slice (e.g. 10 to 15 seconds) from decoded PCM buffer as 16kHz mono WAV base64
    */
   public extractAudioSliceWavBase64(startSec: number, durationSec: number): string | null {

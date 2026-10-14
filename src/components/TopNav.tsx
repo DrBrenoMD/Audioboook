@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Upload, Library, Download, Cpu } from 'lucide-react';
+import { BookOpen, Upload, Library, Download, Cpu, Globe } from 'lucide-react';
 
 interface TopNavProps {
   onOpenUpload: () => void;
@@ -7,6 +7,8 @@ interface TopNavProps {
   onOpenExport: () => void;
   currentBookTitle?: string;
   hasWebGPU?: boolean;
+  language?: 'auto' | 'pt' | 'en';
+  onLanguageChange?: (lang: 'auto' | 'pt' | 'en') => void;
 }
 
 export const TopNav: React.FC<TopNavProps> = ({
@@ -15,6 +17,8 @@ export const TopNav: React.FC<TopNavProps> = ({
   onOpenExport,
   currentBookTitle = 'Dom Casmurro',
   hasWebGPU = true,
+  language = 'auto',
+  onLanguageChange,
 }) => {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-stone-800 bg-stone-950/90 backdrop-blur-md px-6 py-3.5">
@@ -50,6 +54,33 @@ export const TopNav: React.FC<TopNavProps> = ({
             <span className="text-xs text-stone-500">Tocando:</span>
             <span className="text-xs font-semibold text-stone-200 truncate">{currentBookTitle}</span>
           </div>
+
+          {/* Spoken Language Selector */}
+          {onLanguageChange && (
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-stone-900 border border-stone-800 text-xs">
+              <Globe className="w-3 h-3 text-stone-400 mr-1" />
+              {(['auto', 'pt', 'en'] as const).map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => onLanguageChange(lang)}
+                  className={`px-1.5 py-0.5 rounded font-mono uppercase text-[10px] cursor-pointer transition-colors ${
+                    language === lang
+                      ? 'bg-amber-500/20 text-amber-300 font-bold'
+                      : 'text-stone-400 hover:text-stone-200'
+                  }`}
+                  title={
+                    lang === 'auto'
+                      ? 'Detecção automática de idioma'
+                      : lang === 'pt'
+                      ? 'Português'
+                      : 'Inglês'
+                  }
+                >
+                  {lang}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="flex items-center gap-1.5 text-xs font-mono text-emerald-400/90 whitespace-nowrap shrink-0">
             <Cpu className="w-3.5 h-3.5" />

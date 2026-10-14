@@ -13,6 +13,7 @@ interface KaraokeReaderProps {
   author: string;
   narrator?: string;
   format?: 'mp3' | 'm4a';
+  modelStatus?: { isLoading: boolean; progress: number; message: string };
 }
 
 export const KaraokeReader: React.FC<KaraokeReaderProps> = ({
@@ -26,6 +27,7 @@ export const KaraokeReader: React.FC<KaraokeReaderProps> = ({
   author,
   narrator,
   format = 'mp3',
+  modelStatus,
 }) => {
   const [theme, setTheme] = useState<ReaderTheme>('obsidian');
   const [fontSize, setFontSize] = useState<FontSize>('md');
@@ -249,6 +251,25 @@ export const KaraokeReader: React.FC<KaraokeReaderProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Whisper Model Download / Loading Progress Banner */}
+      {modelStatus?.isLoading && (
+        <div className="px-6 py-2.5 bg-amber-500/10 border-b border-amber-500/30 flex items-center justify-between text-xs text-amber-200 shrink-0 select-none animate-pulse">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-400 animate-spin" />
+            <span className="font-medium">{modelStatus.message}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[11px] text-amber-300">{modelStatus.progress}%</span>
+            <div className="w-24 sm:w-36 bg-stone-800 rounded-full h-1.5 overflow-hidden">
+              <div
+                className="bg-amber-400 h-full transition-all duration-300"
+                style={{ width: `${Math.max(8, modelStatus.progress)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Lookahead Buffer Telemetry Banner */}
       <div className={`px-6 py-2 bg-amber-500/5 border-b ${themeClasses.border} flex items-center justify-between text-xs font-mono text-stone-400 select-none shrink-0`}>

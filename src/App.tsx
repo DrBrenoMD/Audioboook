@@ -9,7 +9,7 @@ import { SAMPLE_AUDIOBOOKS } from './services/sampleAudiobooks';
 import { AudiobookItem, WordTimestamp, TranscriptionSegment, LookaheadBufferState } from './types/audiobook';
 import { audioEngine } from './services/audioEngine';
 import { lookaheadManager } from './services/lookaheadManager';
-import { checkWebGPUSupport } from './services/whisperClient';
+import { checkWebGPUSupport, subscribeModelStatus } from './services/whisperClient';
 
 export default function App() {
   const [currentBook, setCurrentBook] = useState<AudiobookItem>(SAMPLE_AUDIOBOOKS[0]);
@@ -21,6 +21,12 @@ export default function App() {
   const [isMuted, setIsMuted] = useState(false);
   const [waveform, setWaveform] = useState<number[]>([]);
   const [hasWebGPU, setHasWebGPU] = useState(true);
+  const [language, setLanguage] = useState<'auto' | 'pt' | 'en'>('auto');
+  const [modelStatus, setModelStatus] = useState<{ isLoading: boolean; progress: number; message: string }>({
+    isLoading: false,
+    progress: 0,
+    message: '',
+  });
 
   // Modals state
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -40,9 +46,13 @@ export default function App() {
 
   const animFrameRef = useRef<number | null>(null);
 
-  // Check WebGPU capabilities on mount
+  // Check WebGPU capabilities and subscribe to Whisper model loading
   useEffect(() => {
     checkWebGPUSupport().then((supported) => setHasWebGPU(supported));
+    const unsub = subscribeModelStatus((status) => {
+      setModelStatus(status);
+    });
+    return () => unsub();
   }, []);
 
   // Subscribe to lookahead buffer manager
@@ -92,6 +102,12 @@ export default function App() {
     loadBook(SAMPLE_AUDIOBOOKS[0]);
   }, [loadBook]);
 
+  const effectiveLanguage = language !== 'auto'
+    ? language
+    : currentBook.id === 'sherlock-holmes' || currentBook.title.toLowerCase().includes('hail mary') || currentBook.title.toLowerCase().includes('chapter')
+    ? 'en'
+    : 'pt';
+
   // Audio engine event bindings
   useEffect(() => {
     audioEngine.setCallbacks(
@@ -100,14 +116,14 @@ export default function App() {
         lookaheadManager.onPlaybackTick(
           time,
           currentBook.format,
-          currentBook.id === 'sherlock-holmes' ? 'en' : 'pt'
+          effectiveLanguage
         );
       },
       () => {
         setIsPlaying(false);
       }
     );
-  }, [currentBook]);
+  }, [currentBook, effectiveLanguage]);
 
   // Continuous high-precision time tracking during playback
   useEffect(() => {
@@ -118,7 +134,7 @@ export default function App() {
         lookaheadManager.onPlaybackTick(
           time,
           currentBook.format,
-          currentBook.id === 'sherlock-holmes' ? 'en' : 'pt'
+          effectiveLanguage
         );
         animFrameRef.current = requestAnimationFrame(tick);
       };
@@ -131,7 +147,7 @@ export default function App() {
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [isPlaying, currentBook]);
+  }, [isPlaying, currentBook, effectiveLanguage]);
 
   // Handle Play/Pause
   const handlePlayPause = async () => {
@@ -152,7 +168,7 @@ export default function App() {
     lookaheadManager.onPlaybackTick(
       clamped,
       currentBook.format,
-      currentBook.id === 'sherlock-holmes' ? 'en' : 'pt'
+      effectiveLanguage
     );
   };
 
@@ -209,6 +225,8 @@ export default function App() {
         onOpenExport={() => setIsExportOpen(true)}
         currentBookTitle={currentBook.title}
         hasWebGPU={hasWebGPU}
+        language={language}
+        onLanguageChange={setLanguage}
       />
 
       {/* Main Interactive Karaoke Reading Area */}
@@ -224,6 +242,7 @@ export default function App() {
           author={currentBook.author}
           narrator={currentBook.narrator}
           format={currentBook.format}
+          modelStatus={modelStatus}
         />
       </main>
 

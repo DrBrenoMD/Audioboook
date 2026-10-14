@@ -109,12 +109,12 @@ export class LookaheadManager {
     const sliceDuration = Math.max(6, targetEndSec - startSec);
 
     try {
-      // Extract slice via AudioEngine
-      const base64Wav = audioEngine.extractAudioSliceWavBase64(startSec, sliceDuration);
+      // Extract 16kHz PCM audio slice directly via AudioEngine
+      const pcmData = audioEngine.extractAudioSlicePCM(startSec, sliceDuration);
 
-      if (base64Wav) {
+      if (pcmData && pcmData.length > 0) {
         const result = await transcribeAudioChunk(
-          base64Wav,
+          pcmData,
           startSec,
           sliceDuration,
           undefined,
@@ -130,7 +130,6 @@ export class LookaheadManager {
       this.transcribedUpTo = Math.max(this.transcribedUpTo, startSec + sliceDuration);
     } catch (err) {
       console.error('Error during lookahead slice transcription:', err);
-      // Advance buffer slightly to prevent infinite stall
       this.transcribedUpTo = Math.max(this.transcribedUpTo, startSec + 4);
     } finally {
       this.isProcessingChunk = false;
